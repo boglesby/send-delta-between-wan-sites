@@ -1,0 +1,48 @@
+# Set screen width
+set variable --name=APP_RESULT_VIEWER --value=any
+
+# Start ln locator
+start locator --name=locator-ln --port=10331 --locators=localhost[10331] --mcast-port=0 --J=-Dgemfire.remote-locators=localhost[10332] --J=-Dgemfire.distributed-system-id=1 --J=-Dgemfire.jmx-manager-start=true --J=-Dgemfire.jmx-manager-http-port=8081 --J=-Dgemfire.jmx-manager-port=1091
+
+# Start ln Servers
+start server --name=server-ln-1 --locators=localhost[10331] --server-port=0 --initial-heap=2g --max-heap=2g --statistic-archive-file=cacheserver.gfs --classpath=../server/build/libs/server-0.0.1-SNAPSHOT.jar --J=-Dgemfire.log-file=cacheserver.log --J=-Dgemfire.conserve-sockets=false
+start server --name=server-ln-2 --locators=localhost[10331] --server-port=0 --initial-heap=2g --max-heap=2g --statistic-archive-file=cacheserver.gfs --classpath=../server/build/libs/server-0.0.1-SNAPSHOT.jar --J=-Dgemfire.log-file=cacheserver.log --J=-Dgemfire.conserve-sockets=false
+
+# Create Gateway Sender to ny
+create gateway-sender --id=ny --remote-distributed-system-id=2 --parallel=true
+
+# Sleep to enable Gateway Senders to be known by the locator through JMX
+sleep --time=5
+
+# Create Regions
+create region --name=session --type=PARTITION_REDUNDANT --cache-writer=example.server.callback.GatewaySenderDeltaCacheWriter --cache-listener=example.server.callback.GatewaySenderDeltaCacheListener
+create region --name=session_gateway_sender_delta_proxy --type=PARTITION_REDUNDANT --gateway-sender-id=ny --colocated-with=session --redundant-copies=1 --enable-concurrency-checks=false --cache-writer=example.server.callback.GatewaySenderProxyCacheWriter
+
+# Create GatewayReceiver
+create gateway-receiver
+
+# Disconnect from ln
+disconnect
+
+# Create ny locator
+start locator --name=locator-ny --port=10332 --locators=localhost[10332] --mcast-port=0 --J=-Dgemfire.remote-locators=localhost[10331] --J=-Dgemfire.distributed-system-id=2 --J=-Dgemfire.jmx-manager-start=true --J=-Dgemfire.jmx-manager-http-port=8082 --J=-Dgemfire.jmx-manager-port=1092
+
+# Start ny Servers
+start server --name=server-ny-1 --locators=localhost[10332] --server-port=0 --statistic-archive-file=cacheserver.gfs --classpath=../server/build/libs/server-0.0.1-SNAPSHOT.jar --J=-Dgemfire.log-file=cacheserver.log --J=-Dgemfire.conserve-sockets=false
+start server --name=server-ny-2 --locators=localhost[10332] --server-port=0 --statistic-archive-file=cacheserver.gfs --classpath=../server/build/libs/server-0.0.1-SNAPSHOT.jar --J=-Dgemfire.log-file=cacheserver.log --J=-Dgemfire.conserve-sockets=false
+
+# Create Gateway Sender to ln
+create gateway-sender --id=ln --remote-distributed-system-id=1 --parallel=true
+
+# Sleep to enable Gateway Senders to be known by the locator through JMX
+sleep --time=5
+
+# Create Regions
+create region --name=session --type=PARTITION_REDUNDANT --cache-writer=example.server.callback.GatewaySenderDeltaCacheWriter --cache-listener=example.server.callback.GatewaySenderDeltaCacheListener
+create region --name=session_gateway_sender_delta_proxy --type=PARTITION_REDUNDANT --gateway-sender-id=ln --colocated-with=session --redundant-copies=1 --enable-concurrency-checks=false --cache-writer=example.server.callback.GatewaySenderProxyCacheWriter
+
+# Create GatewayReceiver
+create gateway-receiver
+
+# Disconnect from ny
+disconnect

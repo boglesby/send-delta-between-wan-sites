@@ -1,0 +1,2 @@
+rootProject.name = 'send-delta-between-wan-sites'
+include 'client','server'
